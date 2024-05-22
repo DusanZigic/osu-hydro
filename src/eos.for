@@ -20,11 +20,14 @@
       common /EOScoeffs/ escale, epow, sscale, spow
 
       character(len=1000) :: find_data_file
+      integer row
 
-      ! read EOS data from binary file
-      open(5, file=find_data_file('eos.dat'), status='old',
-     &     access='stream')
-      read(5) EOSe0, EOSEend, PEOSdata, SEOSdata, TEOSdata
+      ! read EOS data from file
+      open(5, file=find_data_file('eos.dat'), status='old')
+      read(5, *) EOSe0, PEOSdata(1), SEOSdata(1), TEOSdata(1)
+      do row=2,EOSne
+        read(5, *) EOSEend, PEOSdata(row), SEOSdata(row), TEOSdata(row)
+      end do
       close(5)
 
       ! save energy density step size
