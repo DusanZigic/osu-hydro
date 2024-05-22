@@ -73,6 +73,7 @@ C   [5] H.Song, Ph.D thesis 2009, arXiv:0908.3656 [nucl-th].
       Common /R0Aeps/ R0,Aeps
 
       character(len=1000) :: find_data_file
+      character(len=40) :: tevoheadform
 
       call prepareInputFun() ! this is the initialization function in InputFun.for
 
@@ -140,12 +141,23 @@ C   [5] H.Song, Ph.D thesis 2009, arXiv:0908.3656 [nucl-th].
       VisNonzero = (VisHRG > 1d-6) .or. (VisMin > 1d-6)
      &             .or.(VisSlope > 1d-6)
       VisBulkNonzero = (VisBulkMax > 1d-6) .and. (VisBulkWidth > 1d-6)
+ 
+      if (VisNonzero) then
+         open(99, file='eta_per_s_T.dat', status='replace')
+         do itemp = 0, 40
+            temp = 0.100 + itemp * 0.01
+            etas = ViscousCTemp(temp)
+            write(99, *) temp, etas
+         end do
+         close(99)
+      end if
 
       DZ=0.01d0
 
       MaxT = int(40.0/DT)
 
-      open(99, file='surface.dat', access='stream', status='replace')
+      open(93, file='Temp_evo.dat', status='replace')
+      open(99, file='surface.dat', status='replace')
 
       call InputRegulatedEOS
 
@@ -160,9 +172,16 @@ C   [5] H.Song, Ph.D thesis 2009, arXiv:0908.3656 [nucl-th].
       NY0=NYPhy0-5
       NZ0=1
 
+      tevoheadform = "(A,I4,A,F5.2,A,F7.2,A,F6.3,A,F5.2,A)"
+
+      ! Note that temp_evo contains every fifth grid point on each axis
+      write(93,tevoheadform) '# Naxis', 2*LS/5+1, ' dx',DX*5, ' xmin',
+     & NXPhy0*DX, ' dt',DT, ' t0',T0, ' run order y > x > t'
+
       Call Mainpro(NX0,NY0,NZ0,NX,NY,NZ,NXPhy0,NYPhy0,
      &          NXPhy,NYPhy,T0,DX,DY,DZ,DT,MaxT,NDX,NDY,NDT)   ! main program
 
+      close(93)
       close(99)
 
       End
@@ -306,6 +325,7 @@ C-------------------------------------------------------------------------------
       External SEOSL7
       Integer iRegulateCounter, iRegulateCounterBulkPi
 
+      double precision, parameter :: Teloss = 0.001
 
       Edec1 = Edec
 
@@ -501,6 +521,15 @@ C-------------------------------------------------------------------------------
       Print '(I4, 2X, F7.4, 2X, F12.6, 2X, F9.6, 2X, I2, 2X, I2)',
      &      ITime, Time, maxval(Ed)*HBarC, maxval(Temp)*HBarC,
      &      iRegulateCounter, iRegulateCounterBulkPi
+
+c      JA: Old Temp_evo output
+
+      Do I=NXPhy0,NXPhy,5
+      Do J=NYPhy0,NYPhy,5
+        write(93, '(5e15.5)')Time, I*DX, J*DY, Temp(I,J,NZ0)*HBarC,
+     &                       Ed(I,J,NZ0)*Hc
+      End Do
+      End Do
 
 
 C~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -713,9 +742,9 @@ C###############################################################################
            CALL P4(I,J,NDX,NDY,NDT,Vmidpoint,F0PPI,FPPI,
      &             NX0,NY0,NX,NY,DTFreeze,DXFreeze,DYFreeze,CPPI)
 
-           write(99)
+           write(99, *)
      &       Tmid, Xmid, Ymid,
-     &       dSigma(:, iSurf),
+     &       dSigma(0, iSurf), dSigma(1, iSurf), dSigma(2, iSurf),
      &       v1mid, v2mid,
      &       CPi00*HbarC, CPi01*HbarC, CPi02*HbarC,
      &       CPi11*HbarC, CPi12*HbarC, CPi22*HbarC,
